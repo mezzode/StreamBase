@@ -1,4 +1,4 @@
-﻿// StreamBase.h : Include file for standard system include files,
+﻿// client.h : Include file for standard system include files,
 // or project specific include files.
 
 #pragma once
