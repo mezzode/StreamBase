@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include "cereal/archives/binary.hpp" // assuming we can use appropriate 3rd party libs
 #include "cereal/types/string.hpp"

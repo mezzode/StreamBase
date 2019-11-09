@@ -11,69 +11,64 @@
 
 using namespace std;
 
+class CustomClass {
+public:
+	int counterA;
+
+	CustomClass(int a = 0, int b = 0): counterA{a}, counterB{b} {}
+
+	void incrementA() {
+		++counterA;
+	}
+
+	void incrementB() {
+		++counterB;
+	}
+
+	int getA() {
+		return counterA;
+	}
+
+	int getB() {
+		return counterB;
+	}
+
+private:
+	int counterB;
+
+	template<class Archive>
+	friend void serialize(Archive& archive, CustomClass& m);
+	// external serialize function must be friend to serialize private attribute
+};
+
+template<class Archive>
+void serialize(Archive& archive, CustomClass& m) {
+	archive(m.counterA, m.counterB);
+}
+
+
 int main()
 {
 	cout << "I am the client." << endl;
 
 	send("mykey", 42);
-
-	auto data{ get("mykey") };
+	auto data{ get<int>("mykey") };
 	cout << data << endl;
 
+	send("foo", string{ "bar" });
+	cout << get<string>("foo") << endl;
+
+	CustomClass custom{ 10, 20 };
+	custom.incrementA();
+	custom.incrementB();
+	send("mycustomclass", custom);
+	auto savedCustom{ get<CustomClass>("mycustomclass") };
+	savedCustom.incrementA();
+	savedCustom.incrementB();
+	cout << savedCustom.getA() << endl << savedCustom.getB() << endl;
+	// should output 12 and 22
+
 	getchar(); // wait before closing
-}
-
-int get(string key) {
-	cout << "Getting data for key " << key << endl;
-	auto headerData{ serialize(Action { Type::Get, key }) };
-	vector<char> buf(bufSize);
-	DWORD bytesRead;
-	const BOOL success = CallNamedPipe(
-		pipeName,
-		&headerData[0],
-		headerData.size(),
-		buf.data(),
-		buf.size(),
-		&bytesRead,
-		NMPWAIT_WAIT_FOREVER
-	);
-	if (!success) {
-		throw GetLastError();
-	}
-	cout << "Got data for key " << key << endl;
-	auto data{ deserialize<int>(string{buf.data(), bytesRead}) };
-	return data;
-}
-
-void send(string key, int data) {
-	auto h = CreateFile(
-		pipeName,
-		GENERIC_READ | GENERIC_WRITE,
-		0,
-		nullptr,
-		OPEN_EXISTING,
-		0,
-		nullptr
-	);
-	if (h == INVALID_HANDLE_VALUE) {
-		throw "Couldn't connect.";
-	}
-
-	DWORD mode{ PIPE_READMODE_MESSAGE };
-	auto modeSet = SetNamedPipeHandleState(
-		h,    // pipe handle 
-		&mode,  // new pipe mode 
-		nullptr,     // don't set maximum bytes 
-		nullptr);    // don't set maximum time
-	if (!modeSet) {
-		throw "Couldn't put pipe into message mode.";
-	}
-
-	sendHeader(h, key);
-	sendData(h, 42);
-
-	CloseHandle(h);
-	cout << "Send success." << endl;
 }
 
 void sendHeader(HANDLE h, string key) {
@@ -93,24 +88,4 @@ void sendHeader(HANDLE h, string key) {
 		throw GetLastError();
 	}
 	cout << "Sent header." << endl;
-}
-
-void sendData(HANDLE h, int data) {
-	cout << "Sending data." << endl;
-	auto writeStr{ serialize(data) };
-
-	DWORD bytesWritten{ 0 };
-	const BOOL success = WriteFile(
-		h,
-		&writeStr[0],
-		writeStr.size(),
-		&bytesWritten,
-		nullptr
-	);
-
-	if (!success) {
-		// throw GetLastError();
-		cout << "0x" << hex << GetLastError() << endl;
-	}
-	cout << "Sent data." << endl;
 }
