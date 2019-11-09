@@ -8,5 +8,6 @@
 
 using std::string;
 
-void write(string key, int data);
-void sendHeader(string key);
+void send(string key, int data);
+void sendHeader(HANDLE h, string key);
+void sendData(HANDLE h, int data);
