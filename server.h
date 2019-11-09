@@ -5,11 +5,12 @@
 
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 using std::string;
 
-using Store = unordered_map<string, string>;
+using Store = std::unordered_map<string, string>;
 
 void read(HANDLE h, Store &store);
 Action readHeader(HANDLE h);

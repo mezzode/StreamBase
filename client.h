@@ -11,3 +11,4 @@ using std::string;
 void send(string key, int data);
 void sendHeader(HANDLE h, string key);
 void sendData(HANDLE h, int data);
+int get(string key);

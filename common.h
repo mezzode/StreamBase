@@ -1,12 +1,19 @@
+#include <string>
+
 constexpr LPCSTR pipeName{ R"(\\.\pipe\StreamBase)" };
 constexpr DWORD bufSize{ 512 };
 
-enum Type {
+enum class Type {
 	Send,
 	Get
 };
 
 struct Action {
 	Type type;
-	string key;
+	std::string key;
+
+	template <class Archive>
+	void serialize(Archive& archive) {
+		archive(type, key);
+	}
 };

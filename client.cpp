@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <sstream>
+#include <string>
 #include <vector>
 #include "common.h"
 #include "client.h"
@@ -15,10 +16,16 @@ int main()
 	cout << "I am the client." << endl;
 
 	send("mykey", 42);
+
+	auto data{ get("mykey") };
+	cout << data << endl;
+
+	getchar(); // wait before closing
 }
 
 int get(string key) {
-	auto headerData{ serialize(Action { Get, key }) };
+	cout << "Getting data for key " << key << endl;
+	auto headerData{ serialize(Action { Type::Get, key }) };
 	vector<char> buf(bufSize);
 	DWORD bytesRead;
 	const BOOL success = CallNamedPipe(
@@ -33,9 +40,8 @@ int get(string key) {
 	if (!success) {
 		throw GetLastError();
 	}
-
+	cout << "Got data for key " << key << endl;
 	auto data{ deserialize<int>(string{buf.data(), bytesRead}) };
-	cout << data << endl;
 	return data;
 }
 
@@ -66,13 +72,14 @@ void send(string key, int data) {
 	sendHeader(h, key);
 	sendData(h, 42);
 
-	getchar(); // wait before closing
+	CloseHandle(h);
+	cout << "Send success." << endl;
 }
 
 void sendHeader(HANDLE h, string key) {
 	cout << "Sending header." << endl;
 
-	auto headerData{ serialize(Action { Send, key }) };
+	auto headerData{ serialize(Action { Type::Send, key }) };
 	DWORD bytesWritten{ 0 };
 	const BOOL success = WriteFile(
 		h,
@@ -85,10 +92,11 @@ void sendHeader(HANDLE h, string key) {
 	if (!success) {
 		throw GetLastError();
 	}
-	cout << "Sent header.";
+	cout << "Sent header." << endl;
 }
 
 void sendData(HANDLE h, int data) {
+	cout << "Sending data." << endl;
 	auto writeStr{ serialize(data) };
 
 	DWORD bytesWritten{ 0 };
@@ -104,4 +112,5 @@ void sendData(HANDLE h, int data) {
 		// throw GetLastError();
 		cout << "0x" << hex << GetLastError() << endl;
 	}
+	cout << "Sent data." << endl;
 }

@@ -34,26 +34,38 @@ int main()
 		throw GetLastError();
 	}
 
-	const BOOL success = ConnectNamedPipe(h, nullptr);
-	if (!success) {
-		throw GetLastError();
-	}
-
-	cout << "Connected to client." << endl;
-
 	while (TRUE) {
+		const BOOL success = ConnectNamedPipe(h, nullptr);
+		if (!success) {
+			cout << "0x" << hex << GetLastError() << endl;
+			throw GetLastError();
+		}
+		cout << "Connected." << endl;
+
 		read(h, store);
+
+		const BOOL dSuccess = DisconnectNamedPipe(h);
+		if (!dSuccess) {
+			cout << "0x" << hex << GetLastError() << endl;
+			throw GetLastError();
+		}
 	}
 }
 
 void read(HANDLE h, Store &store) {
 	const auto action{ readHeader(h) };
 	switch (action.type) {
-		case Send: {
+		case Type::Send: {
+			cout << "Saving data for key " << action.key << endl;
 			store[action.key] = readData(h);
+			cout << "Saved data for key " << action.key << endl;
+			break;
 		}
-		case Get: {
+		case Type::Get: {
+			cout << "Getting data for key " << action.key << endl;
 			returnData(h, store.at(action.key));
+			cout << "Got data for key " << action.key << endl;
+			break;
 		}
 	}
 }
@@ -67,7 +79,9 @@ void returnData(HANDLE h, string data) {
 		&bytesWritten,
 		nullptr
 	);
+	FlushFileBuffers(h);
 	if (!success) {
+		cout << "0x" << hex << GetLastError() << endl;
 		throw GetLastError();
 	}
 }
