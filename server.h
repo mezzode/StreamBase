@@ -9,6 +9,9 @@
 
 using std::string;
 
-std::pair<string, string> read(HANDLE h);
+using Store = unordered_map<string, string>;
+
+void read(HANDLE h, Store &store);
 Action readHeader(HANDLE h);
 string readData(HANDLE h);
+void returnData(HANDLE h, string data);

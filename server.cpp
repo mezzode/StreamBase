@@ -39,27 +39,35 @@ int main()
 
 	cout << "Connected to client." << endl;
 
-	auto kv = read(h);
-	store.insert(kv);
-
-	cout << kv.first << endl; // test that key is received correctly
-
-	getchar(); // wait before closing
+	while (TRUE) {
+		read(h, store);
+	}
 }
 
-pair<string, string> read(HANDLE h) {
+void read(HANDLE h, Store &store) {
 	const auto action{ readHeader(h) };
 	switch (action.type) {
 		case Send: {
-			const string data{ readData(h) };
-			// make_pair(action.key, data); TODO: save to store
+			store[action.key] = readData(h);
 		}
 		case Get: {
-			// TODO: get from store and send back
+			returnData(h, store.at(action.key));
 		}
 	}
-	
-	return 
+}
+
+void returnData(HANDLE h, string data) {
+	DWORD bytesWritten{ 0 };
+	const BOOL success = WriteFile(
+		h,
+		&data[0],
+		data.size(),
+		&bytesWritten,
+		nullptr
+	);
+	if (!success) {
+		throw GetLastError();
+	}
 }
 
 string readData(HANDLE h) {
