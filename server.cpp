@@ -16,7 +16,7 @@ int main()
 	const DWORD pipeMode{ PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT };
 	// don't use PIPE_NOWAIT for async, see https://docs.microsoft.com/en-us/windows/win32/ipc/synchronous-and-overlapped-input-and-output
 
-	const HANDLE handle = CreateNamedPipe(
+	const HANDLE h{ CreateNamedPipe(
 		pipeName,
 		PIPE_ACCESS_DUPLEX,
 		pipeMode,
@@ -25,25 +25,27 @@ int main()
 		bufSize,
 		0,
 		nullptr
-	);
-	if (handle == INVALID_HANDLE_VALUE) {
-		return GetLastError();
+	) };
+	if (h == INVALID_HANDLE_VALUE) {
+		throw GetLastError();
 	}
 
-	const BOOL success = ConnectNamedPipe(handle, nullptr);
+	const BOOL success = ConnectNamedPipe(h, nullptr);
 	if (!success) {
-		return GetLastError();
+		throw GetLastError();
 	}
 
+	read(h);
+}
+
+int read(HANDLE h) {
 	std::vector<char> buf(bufSize);
 
 	DWORD bytesRead;
-	const BOOL readSuccess = ReadFile(handle, &buf[0], buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
+	const BOOL readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
 	if (!readSuccess) {
 		return GetLastError();
 	}
-
-	// TODO: use buf.data() instead of %buf[0] for vector pointers
 
 	int test;
 	{
@@ -52,4 +54,5 @@ int main()
 		iarchive(test);
 	}
 	cout << test << endl;
+	return test;
 }
