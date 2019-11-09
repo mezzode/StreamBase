@@ -11,4 +11,3 @@ using std::string;
 void send(string key, int data);
 void sendHeader(HANDLE h, string key);
 void sendData(HANDLE h, int data);
-template<class T> string serialize(T data);

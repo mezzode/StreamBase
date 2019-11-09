@@ -3,9 +3,11 @@
 
 #include <windows.h>
 #include <sstream>
-#include "cereal/archives/binary.hpp"
+#include <unordered_map>
+#include <string>
 #include "common.h"
 #include "server.h"
+#include "serialization.h"
 
 using namespace std;
 
@@ -93,16 +95,4 @@ Action readHeader(HANDLE h) {
 
 	auto action = deserialize<Action>(string{ buf.data(), bytesRead });
 	return action;
-}
-
-template<class T>
-T deserialize(const string &serializedData) {
-	T data;
-	{
-		std::istringstream in{ serializedData };
-		cereal::BinaryInputArchive iarchive{ in };
-		iarchive(data);
-	}
-	// writeStr.c_str() returns a const char * so would need to copy it to get a non-const *
-	return data;
 }

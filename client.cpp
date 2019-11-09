@@ -3,9 +3,10 @@
 
 #include <windows.h>
 #include <sstream>
-#include "cereal/archives/binary.hpp" // assuming we can use appropriate 3rd party libs
+#include <vector>
 #include "common.h"
 #include "client.h"
+#include "serialization.h"
 
 using namespace std;
 
@@ -18,7 +19,7 @@ int main()
 
 int get(string key) {
 	auto headerData{ serialize(Action { Get, key }) };
-	std::vector<char> buf(bufSize);
+	vector<char> buf(bufSize);
 	DWORD bytesRead;
 	const BOOL success = CallNamedPipe(
 		pipeName,
@@ -33,12 +34,7 @@ int get(string key) {
 		throw GetLastError();
 	}
 
-	int data;
-	{
-		std::istringstream in{ string{buf.data(), bytesRead} };
-		cereal::BinaryInputArchive iarchive{ in };
-		iarchive(data);
-	}
+	auto data{ deserialize<int>(string{buf.data(), bytesRead}) };
 	cout << data << endl;
 	return data;
 }
@@ -108,16 +104,4 @@ void sendData(HANDLE h, int data) {
 		// throw GetLastError();
 		cout << "0x" << hex << GetLastError() << endl;
 	}
-}
-
-template<class T>
-string serialize(T data) {
-	std::ostringstream out;
-	{
-		// not using portable binary archive since client and server on same machine so same endianness
-		cereal::BinaryOutputArchive oarchive{ out };
-		oarchive(data);
-	}
-	// writeStr.c_str() returns a const char * so would need to copy it to get a non-const *
-	return out.str();
 }
