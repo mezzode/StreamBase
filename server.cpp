@@ -13,6 +13,8 @@ int main()
 {
 	cout << "I am the server." << endl;
 
+	auto store = unordered_map<string, string>{};
+
 	const DWORD pipeMode{ PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT };
 	// don't use PIPE_NOWAIT for async, see https://docs.microsoft.com/en-us/windows/win32/ipc/synchronous-and-overlapped-input-and-output
 
@@ -35,24 +37,46 @@ int main()
 		throw GetLastError();
 	}
 
-	read(h);
+	cout << "Connected to client." << endl;
+
+	auto kv = read(h);
+	store.insert(kv);
+
+	cout << kv.first << endl; // test that key is received correctly
+
+	getchar(); // wait before closing
 }
 
-int read(HANDLE h) {
+pair<string, string> read(HANDLE h) {
+	const string key{ readHeader(h) };
+	const string data{ readData(h) };
+	return make_pair(key, data);
+}
+
+string readData(HANDLE h) {
 	std::vector<char> buf(bufSize);
 
 	DWORD bytesRead;
 	const BOOL readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
 	if (!readSuccess) {
-		return GetLastError();
+		throw GetLastError();
 	}
 
-	int test;
-	{
-		std::istringstream in{ std::string{buf.data(), bytesRead} };
-		cereal::BinaryInputArchive iarchive{ in };
-		iarchive(test);
+	return string{ buf.data(), bytesRead };
+}
+
+string readHeader(HANDLE h) {
+	std::vector<char> buf(bufSize);
+
+	DWORD bytesRead;
+	const BOOL readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
+	if (!readSuccess) {
+		throw GetLastError();
 	}
-	cout << test << endl;
-	return test;
+
+	const string key{ buf.data(), bytesRead };
+
+	cout << key << endl;
+
+	return key;
 }

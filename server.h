@@ -4,5 +4,11 @@
 #pragma once
 
 #include <iostream>
+#include <string>
+#include <utility>
 
-int read(HANDLE h);
+using std::string;
+
+std::pair<string, string> read(HANDLE h);
+string readHeader(HANDLE h);
+string readData(HANDLE h);

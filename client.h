@@ -4,5 +4,9 @@
 #pragma once
 
 #include <iostream>
+#include <string>
 
-// TODO: Reference additional headers your program requires here.
+using std::string;
+
+void write(string key, int data);
+void sendHeader(string key);
