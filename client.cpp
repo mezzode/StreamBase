@@ -16,23 +16,31 @@ int main()
 	send("mykey", 42);
 }
 
-int read(HANDLE h) {
+int get(string key) {
+	auto headerData{ serialize(Action { Get, key }) };
 	std::vector<char> buf(bufSize);
-
 	DWORD bytesRead;
-	const BOOL readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
-	if (!readSuccess) {
-		return GetLastError();
+	const BOOL success = CallNamedPipe(
+		pipeName,
+		&headerData[0],
+		headerData.size(),
+		buf.data(),
+		buf.size(),
+		&bytesRead,
+		NMPWAIT_WAIT_FOREVER
+	);
+	if (!success) {
+		throw GetLastError();
 	}
 
-	int test;
+	int data;
 	{
-		std::istringstream in{ std::string{buf.data(), bytesRead} };
+		std::istringstream in{ string{buf.data(), bytesRead} };
 		cereal::BinaryInputArchive iarchive{ in };
-		iarchive(test);
+		iarchive(data);
 	}
-	cout << test << endl;
-	return test;
+	cout << data << endl;
+	return data;
 }
 
 void send(string key, int data) {
@@ -68,12 +76,12 @@ void send(string key, int data) {
 void sendHeader(HANDLE h, string key) {
 	cout << "Sending header." << endl;
 
+	auto headerData{ serialize(Action { Send, key }) };
 	DWORD bytesWritten{ 0 };
-
 	const BOOL success = WriteFile(
 		h,
-		&key[0],
-		key.size(),
+		&headerData[0],
+		headerData.size(),
 		&bytesWritten,
 		nullptr // not overlapped i.e. synchronous
 	);
@@ -85,16 +93,7 @@ void sendHeader(HANDLE h, string key) {
 }
 
 void sendData(HANDLE h, int data) {
-	std::ostringstream out;
-
-	{
-		// not using portable binary archive since client and server on same machine so same endianness
-		cereal::BinaryOutputArchive oarchive{ out };
-		oarchive(data);
-	}
-
-	auto writeStr{ out.str() };
-	// writeStr.c_str() returns a const char * so would need to copy it to get a non-const *
+	auto writeStr{ serialize(data) };
 
 	DWORD bytesWritten{ 0 };
 	const BOOL success = WriteFile(
@@ -109,4 +108,16 @@ void sendData(HANDLE h, int data) {
 		// throw GetLastError();
 		cout << "0x" << hex << GetLastError() << endl;
 	}
+}
+
+template<class T>
+string serialize(T data) {
+	std::ostringstream out;
+	{
+		// not using portable binary archive since client and server on same machine so same endianness
+		cereal::BinaryOutputArchive oarchive{ out };
+		oarchive(data);
+	}
+	// writeStr.c_str() returns a const char * so would need to copy it to get a non-const *
+	return out.str();
 }

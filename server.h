@@ -10,5 +10,5 @@
 using std::string;
 
 std::pair<string, string> read(HANDLE h);
-string readHeader(HANDLE h);
+Action readHeader(HANDLE h);
 string readData(HANDLE h);

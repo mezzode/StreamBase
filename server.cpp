@@ -48,9 +48,18 @@ int main()
 }
 
 pair<string, string> read(HANDLE h) {
-	const string key{ readHeader(h) };
-	const string data{ readData(h) };
-	return make_pair(key, data);
+	const auto action{ readHeader(h) };
+	switch (action.type) {
+		case Send: {
+			const string data{ readData(h) };
+			// make_pair(action.key, data); TODO: save to store
+		}
+		case Get: {
+			// TODO: get from store and send back
+		}
+	}
+	
+	return 
 }
 
 string readData(HANDLE h) {
@@ -65,7 +74,7 @@ string readData(HANDLE h) {
 	return string{ buf.data(), bytesRead };
 }
 
-string readHeader(HANDLE h) {
+Action readHeader(HANDLE h) {
 	std::vector<char> buf(bufSize);
 
 	DWORD bytesRead;
@@ -74,9 +83,18 @@ string readHeader(HANDLE h) {
 		throw GetLastError();
 	}
 
-	const string key{ buf.data(), bytesRead };
+	auto action = deserialize<Action>(string{ buf.data(), bytesRead });
+	return action;
+}
 
-	cout << key << endl;
-
-	return key;
+template<class T>
+T deserialize(const string &serializedData) {
+	T data;
+	{
+		std::istringstream in{ serializedData };
+		cereal::BinaryInputArchive iarchive{ in };
+		iarchive(data);
+	}
+	// writeStr.c_str() returns a const char * so would need to copy it to get a non-const *
+	return data;
 }
