@@ -2,6 +2,7 @@
 //
 
 #include <windows.h>
+#include <thread>
 #include <sstream>
 #include <unordered_map>
 #include <string>
@@ -15,26 +16,25 @@ int main()
 {
 	cout << "I am the server." << endl;
 
+	// TODO: add mutex. stl allows multiple threads reading and one writing
 	auto store = unordered_map<string, string>{};
 
-	const DWORD pipeMode{ PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT };
-	// don't use PIPE_NOWAIT for async, see https://docs.microsoft.com/en-us/windows/win32/ipc/synchronous-and-overlapped-input-and-output
-
-	const HANDLE h{ CreateNamedPipe(
-		pipeName,
-		PIPE_ACCESS_DUPLEX,
-		pipeMode,
-		PIPE_UNLIMITED_INSTANCES,
-		bufSize,
-		bufSize,
-		0,
-		nullptr
-	) };
-	if (h == INVALID_HANDLE_VALUE) {
-		throw GetLastError();
-	}
-
 	while (TRUE) {
+		const DWORD pipeMode{ PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT };
+		const HANDLE h{ CreateNamedPipe(
+			pipeName,
+			PIPE_ACCESS_DUPLEX,
+			pipeMode,
+			PIPE_UNLIMITED_INSTANCES,
+			bufSize,
+			bufSize,
+			0,
+			nullptr
+		) };
+		if (h == INVALID_HANDLE_VALUE) {
+			throw GetLastError();
+		}
+
 		const BOOL success = ConnectNamedPipe(h, nullptr);
 		if (!success) {
 			cout << "0x" << hex << GetLastError() << endl;
@@ -42,13 +42,16 @@ int main()
 		}
 		cout << "Connected." << endl;
 
-		read(h, store);
-
-		const BOOL dSuccess = DisconnectNamedPipe(h);
-		if (!dSuccess) {
-			cout << "0x" << hex << GetLastError() << endl;
-			throw GetLastError();
-		}
+		// create a separate thread so can handle clients asynchronously
+		thread{[h, &store]() {
+			read(h, store);
+			const BOOL dSuccess = DisconnectNamedPipe(h);
+			if (!dSuccess) {
+				cout << "0x" << hex << GetLastError() << endl;
+				throw GetLastError();
+			}
+			CloseHandle(h);
+		}}.detach();
 	}
 }
 
@@ -59,6 +62,7 @@ void read(HANDLE h, Store &store) {
 			cout << "Saving data for key " << action.key << endl;
 			store[action.key] = readData(h);
 			cout << "Saved data for key " << action.key << endl;
+			saveSuccess(h);
 			break;
 		}
 		case Type::Get: {
@@ -67,6 +71,22 @@ void read(HANDLE h, Store &store) {
 			cout << "Got data for key " << action.key << endl;
 			break;
 		}
+	}
+}
+
+void saveSuccess(HANDLE h) {
+	DWORD bytesWritten{ 0 };
+	const BOOL success = WriteFile(
+		h,
+		&saveSuccessStatus[0],
+		saveSuccessStatus.size(),
+		&bytesWritten,
+		nullptr
+	);
+	FlushFileBuffers(h);
+	if (!success) {
+		cout << "0x" << hex << GetLastError() << endl;
+		throw GetLastError();
 	}
 }
 

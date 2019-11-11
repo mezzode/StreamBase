@@ -19,3 +19,5 @@ struct Action {
 		archive(type, key);
 	}
 };
+
+const std::string saveSuccessStatus{ "saveSuccess" };

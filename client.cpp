@@ -29,3 +29,15 @@ void sendHeader(HANDLE h, string key) {
 	}
 	cout << "Sent header." << endl;
 }
+
+bool awaitSendSuccess(HANDLE h) {
+	std::vector<char> buf(bufSize);
+
+	DWORD bytesRead;
+	const BOOL readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
+	if (!readSuccess) {
+		throw GetLastError();
+	}
+
+	return string{ buf.data(), bytesRead } == saveSuccessStatus;
+}

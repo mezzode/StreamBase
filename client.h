@@ -13,6 +13,7 @@
 using std::string;
 
 void sendHeader(HANDLE h, string key);
+bool awaitSendSuccess(HANDLE h);
 
 template <class T>
 void send(string key, T data) {
@@ -41,9 +42,10 @@ void send(string key, T data) {
 
 	sendHeader(h, key);
 	sendData(h, data);
+	const bool success = awaitSendSuccess(h);
 
 	CloseHandle(h);
-	cout << "Send success." << endl;
+	cout << "Send " << (success ? "success" : "fail") << endl;
 }
 
 template<class T>

@@ -16,3 +16,4 @@ void read(HANDLE h, Store &store);
 Action readHeader(HANDLE h);
 string readData(HANDLE h);
 void returnData(HANDLE h, string data);
+void saveSuccess(HANDLE h);
