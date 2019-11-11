@@ -1,5 +1,5 @@
 #include "client.h"
-#include "exampleClient.h"
+#include "CustomClass.h"
 
 using namespace std;
 
@@ -25,27 +25,4 @@ int main()
 	// should output 12 and 22
 
 	getchar(); // wait before closing
-}
-
-CustomClass::CustomClass(int a = 0, int b = 0) : counterA{ a }, counterB{ b } {}
-
-void CustomClass::incrementA() {
-	++counterA;
-}
-
-void CustomClass::incrementB() {
-	++counterB;
-}
-
-int CustomClass::getA() {
-	return counterA;
-}
-
-int CustomClass::getB() {
-	return counterB;
-}
-
-template<class Archive>
-void serialize(Archive& archive, CustomClass& m) {
-	archive(m.counterA, m.counterB);
 }

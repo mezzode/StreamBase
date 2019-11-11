@@ -4,7 +4,7 @@ class CustomClass {
 public:
 	int counterA;
 
-	CustomClass(int a, int b);
+	CustomClass(int a = 0, int b = 0);
 	void incrementA();
 	void incrementB();
 	int getA();
@@ -16,3 +16,8 @@ private:
 	friend void serialize(Archive& archive, CustomClass& m);
 	// external serialize function must be friend to serialize private attribute
 };
+
+template<class Archive>
+void serialize(Archive& archive, CustomClass& m) {
+	archive(m.counterA, m.counterB);
+}
