@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <windows.h>
+#include "common.h"
 #include "serialization.h"
 
 using std::string;

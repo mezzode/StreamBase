@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 
 constexpr LPCSTR pipeName{ R"(\\.\pipe\StreamBase)" };
