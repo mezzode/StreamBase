@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "cereal/archives/binary.hpp" // assuming we can use appropriate 3rd party libs
+#include "cereal/archives/binary.hpp"
 #include "cereal/types/string.hpp"
 
 template<class T>
@@ -12,7 +12,6 @@ std::string serialize(T data) {
 		cereal::BinaryOutputArchive oarchive{ out };
 		oarchive(data);
 	}
-	// writeStr.c_str() returns a const char * so would need to copy it to get a non-const *
 	return out.str();
 }
 
@@ -24,6 +23,5 @@ T deserialize(const std::string& serializedData) {
 		cereal::BinaryInputArchive iarchive{ in };
 		iarchive(data);
 	}
-	// writeStr.c_str() returns a const char * so would need to copy it to get a non-const *
 	return data;
 }

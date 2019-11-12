@@ -7,55 +7,75 @@ using namespace std;
 
 int main()
 {
-	cout << "I am the async client." << endl;
+	log("I am the async client.");
 
-	const auto policy{ std::launch::async };
+	const auto policy{ launch::async };
+
+	const string intKey{ "MyKeyAsync" };
+	const string strKey{ "She" };
+	const string customKey{ "CustomClassAsync" };
 
 	// sends
 
-	auto intSend{ std::async(policy, []() {
-		cout << "Sending int" << endl;
-		send("mykeyasync", 101);
+	auto intSend{ async(policy, [intKey]() {
+		log("Sending int");
+		try {
+			send(intKey, 101);
+		}
+		catch (char e[]) {
+			// manually catch errors since exceptions only propagate on .get()
+			log(e);
+			terminate();
+		}
+		log("Sent int");
 	}) };
 
-	auto strSend{ std::async(policy, []() {
-		cout << "Sending string" << endl;
+	auto strSend{ async(policy, [strKey]() {
+		log("Sending string");
 		try {
-			send("she", string{ "ra" });
+			send(strKey, string{ "Ra" });
 		} catch (char e[]) {
 			// manually catch errors since exceptions only propagate on .get()
-			cout << e << endl;
-			std::terminate();
+			log(e);
+			terminate();
 		}
-		cout << "Sent string" << endl;
+		log("Sent string");
 	}) };
 	
-	auto customSend{ std::async(policy, []() {
-		cout << "Sending custom class" << endl;
+	auto customSend{ async(policy, [customKey]() {
+		log("Sending custom class");
 		CustomClass custom{ 42, 81 };
 		custom.incrementA();
 		custom.incrementB();
-		send("mycustomclassasync", custom);
+		try {
+			send(customKey, custom);
+		}
+		catch (char e[]) {
+			// manually catch errors since exceptions only propagate on .get()
+			log(e);
+			terminate();
+		}
+		log("Sent custom class");
 	}) };
 
 	// gets
 
-	auto intGet{ std::async(policy, [&intSend]() {
+	auto intGet{ async(policy, [intKey, &intSend]() {
 		intSend.get(); // await send success
-		cout << get<int>("mykeyasync") << endl;
+		log(intKey + " -> " + to_string(get<int>(intKey)));
 	}) };
 
-	auto strGet{ std::async(policy, [&strSend]() {
+	auto strGet{ async(policy, [strKey, &strSend]() {
 		strSend.get(); // await send success
-		cout << get<string>("she") << endl;
+		log(strKey + " -> " + get<string>(strKey));
 	}) };
 
-	auto customGet{ std::async(policy, [&customSend]() {
+	auto customGet{ async(policy, [customKey, &customSend]() {
 		customSend.get(); // await send success
-		auto savedCustom{ get<CustomClass>("mycustomclassasync") };
+		auto savedCustom{ get<CustomClass>(customKey) };
 		savedCustom.incrementA();
 		savedCustom.incrementB();
-		cout << savedCustom.getA() << endl << savedCustom.getB() << endl;
+		log("A=" + to_string(savedCustom.getA()) + ", B=" + to_string(savedCustom.getB()));
 	}) };
 
 	getchar(); // wait before closing

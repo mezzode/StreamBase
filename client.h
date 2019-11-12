@@ -1,12 +1,8 @@
-﻿// client.h : Include file for standard system include files,
-// or project specific include files.
-
-#pragma once
+﻿#pragma once
 
 #include <iostream>
 #include <string>
 #include <vector>
-#include <windows.h>
 #include "common.h"
 #include "serialization.h"
 
@@ -36,7 +32,8 @@ void send(string key, T data) {
 				throw "Couldn't connect.";
 			}
 
-			// else server hasnt yet made another instance for additional clients so wait
+			// server hasnt yet made another instance for additional clients
+			// so wait then try again
 			auto instanceReady{ WaitNamedPipe(pipeName, NMPWAIT_WAIT_FOREVER) };
 			if (!instanceReady) {
 				cout << "Couldn't connect: 0x" << hex << GetLastError() << endl;
@@ -44,8 +41,6 @@ void send(string key, T data) {
 			}
 		}
 	}
-
-	cout << "CreateFile " << key << endl;
 
 	DWORD mode{ PIPE_READMODE_MESSAGE };
 	auto modeSet = SetNamedPipeHandleState(
@@ -57,23 +52,21 @@ void send(string key, T data) {
 		throw "Couldn't put pipe into message mode.";
 	}
 
-	cout << "Mode set " << key << endl;
-
 	sendHeader(h, key);
 	sendData(h, data);
 	const bool success = awaitSendSuccess(h);
 
 	CloseHandle(h);
-	cout << "Send " << (success ? "success" : "fail") << endl;
+	log(string{ "Send " } + (success ? "success" : "fail"));
 }
 
 template<class T>
 T get(string key) {
-	cout << "Getting data for key " << key << endl;
+	log("Getting data for key " + key);
 	auto headerData{ serialize(Action { Type::Get, key }) };
-	std::vector<char> buf(bufSize);
+	vector<char> buf(bufSize);
 	DWORD bytesRead;
-	const BOOL success = CallNamedPipe(
+	const bool success = CallNamedPipe(
 		pipeName,
 		&headerData[0],
 		headerData.size(),
@@ -85,18 +78,18 @@ T get(string key) {
 	if (!success) {
 		throw GetLastError();
 	}
-	cout << "Got data for key " << key << endl;
+	log("Got data for key " + key);
 	auto data{ deserialize<T>(string{buf.data(), bytesRead}) };
 	return data;
 }
 
 template<class T>
 void sendData(HANDLE h, T data) {
-	cout << "Sending data." << endl;
+	log("Sending data");
 	auto writeStr{ serialize(data) };
 
 	DWORD bytesWritten{ 0 };
-	const BOOL success = WriteFile(
+	const bool success = WriteFile(
 		h,
 		&writeStr[0],
 		writeStr.size(),
@@ -105,8 +98,8 @@ void sendData(HANDLE h, T data) {
 	);
 
 	if (!success) {
-		// throw GetLastError();
 		cout << "0x" << hex << GetLastError() << endl;
+		throw GetLastError();
 	}
-	cout << "Sent data." << endl;
+	log("Sent data");
 }

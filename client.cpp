@@ -1,7 +1,4 @@
-﻿// client.cpp : Defines the entry point for the application.
-//
-
-#include <windows.h>
+﻿#include <windows.h>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -12,11 +9,11 @@
 using namespace std;
 
 void sendHeader(HANDLE h, string key) {
-	cout << "Sending header." << endl;
+	log("Sending header.");
 
 	auto headerData{ serialize(Action { Type::Send, key }) };
 	DWORD bytesWritten{ 0 };
-	const BOOL success = WriteFile(
+	const bool success = WriteFile(
 		h,
 		&headerData[0],
 		headerData.size(),
@@ -27,14 +24,20 @@ void sendHeader(HANDLE h, string key) {
 	if (!success) {
 		throw GetLastError();
 	}
-	cout << "Sent header." << endl;
+	log("Sent header.");
 }
 
 bool awaitSendSuccess(HANDLE h) {
-	std::vector<char> buf(bufSize);
+	vector<char> buf(bufSize);
 
 	DWORD bytesRead;
-	const BOOL readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
+	const bool readSuccess = ReadFile(
+		h,
+		buf.data(),
+		buf.size(),
+		&bytesRead,
+		nullptr
+	);
 	if (!readSuccess) {
 		throw GetLastError();
 	}

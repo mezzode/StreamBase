@@ -1,7 +1,4 @@
-﻿// server.cpp : Defines the entry point for the application.
-//
-
-#include <windows.h>
+﻿#include <windows.h>
 #include <shared_mutex>
 #include <thread>
 #include <sstream>
@@ -15,7 +12,7 @@ using namespace std;
 
 int main()
 {
-	cout << "I am the server." << endl;
+	log("I am the server");
 	
 	Store store;
 
@@ -35,18 +32,18 @@ int main()
 			throw GetLastError();
 		}
 
-		const BOOL success = ConnectNamedPipe(h, nullptr);
+		const bool success = ConnectNamedPipe(h, nullptr);
 		if (!success) {
 			cout << "0x" << hex << GetLastError() << endl;
 			throw GetLastError();
 		}
-		cout << "Connected." << endl;
+		log("Connected to a client");
 
 		// create a separate thread so can handle clients asynchronously
 		thread{[h, &store]() {
 			read(h, store);
 			FlushFileBuffers(h);
-			const BOOL dSuccess = DisconnectNamedPipe(h);
+			const bool dSuccess = DisconnectNamedPipe(h);
 			if (!dSuccess) {
 				cout << "0x" << hex << GetLastError() << endl;
 				throw GetLastError();
@@ -60,24 +57,24 @@ void read(HANDLE h, Store &store) {
 	const auto action{ readHeader(h) };
 	switch (action.type) {
 		case Type::Send: {
-			cout << "Saving data for key " << action.key << endl;
+			log("Saving data for key " + action.key);
 			{
 				// only one thread can write at a time
-				std::lock_guard<std::shared_mutex> lg{ store.lock };
+				lock_guard<shared_mutex> lg{ store.lock };
 				store.records[action.key] = readData(h);
 			}
-			cout << "Saved data for key " << action.key << endl;
+			log("Saved data for key " + action.key);
 			saveSuccess(h);
 			break;
 		}
 		case Type::Get: {
-			cout << "Getting data for key " << action.key << endl;
+			log("Getting data for key " + action.key);
 			{
 				// any number of threads can read
-				std::shared_lock<std::shared_mutex> lg{ store.lock };
+				shared_lock<shared_mutex> lg{ store.lock };
 				returnData(h, store.records.at(action.key));
 			}
-			cout << "Got data for key " << action.key << endl;
+			log("Got data for key " + action.key);
 			break;
 		}
 	}
@@ -85,7 +82,7 @@ void read(HANDLE h, Store &store) {
 
 void saveSuccess(HANDLE h) {
 	DWORD bytesWritten{ 0 };
-	const BOOL success = WriteFile(
+	const bool success = WriteFile(
 		h,
 		&saveSuccessStatus[0],
 		saveSuccessStatus.size(),
@@ -101,7 +98,7 @@ void saveSuccess(HANDLE h) {
 
 void returnData(HANDLE h, string data) {
 	DWORD bytesWritten{ 0 };
-	const BOOL success = WriteFile(
+	const bool success = WriteFile(
 		h,
 		&data[0],
 		data.size(),
@@ -116,10 +113,10 @@ void returnData(HANDLE h, string data) {
 }
 
 string readData(HANDLE h) {
-	std::vector<char> buf(bufSize);
+	vector<char> buf(bufSize);
 
 	DWORD bytesRead;
-	const BOOL readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
+	const bool readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr);
 	if (!readSuccess) {
 		throw GetLastError();
 	}
@@ -128,10 +125,10 @@ string readData(HANDLE h) {
 }
 
 Action readHeader(HANDLE h) {
-	std::vector<char> buf(bufSize);
+	vector<char> buf(bufSize);
 
 	DWORD bytesRead;
-	const BOOL readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr); // Use ReadFileEx for async
+	const bool readSuccess = ReadFile(h, buf.data(), buf.size(), &bytesRead, nullptr);
 	if (!readSuccess) {
 		throw GetLastError();
 	}
