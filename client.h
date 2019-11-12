@@ -17,18 +17,35 @@ bool awaitSendSuccess(HANDLE h);
 
 template <class T>
 void send(string key, T data) {
-	auto h = CreateFile(
-		pipeName,
-		GENERIC_READ | GENERIC_WRITE,
-		0,
-		nullptr,
-		OPEN_EXISTING,
-		0,
-		nullptr
-	);
-	if (h == INVALID_HANDLE_VALUE) {
-		throw "Couldn't connect.";
+	HANDLE h{ INVALID_HANDLE_VALUE };
+	while (h == INVALID_HANDLE_VALUE) {
+		h = CreateFile(
+			pipeName,
+			GENERIC_READ | GENERIC_WRITE,
+			0,
+			nullptr,
+			OPEN_EXISTING,
+			0,
+			nullptr
+		);
+
+		if (h == INVALID_HANDLE_VALUE) {
+			auto e = GetLastError();
+			if (e != ERROR_PIPE_BUSY) {
+				cout << "0x" << hex << GetLastError() << endl;
+				throw "Couldn't connect.";
+			}
+
+			// else server hasnt yet made another instance for additional clients so wait
+			auto instanceReady{ WaitNamedPipe(pipeName, NMPWAIT_WAIT_FOREVER) };
+			if (!instanceReady) {
+				cout << "Couldn't connect: 0x" << hex << GetLastError() << endl;
+				throw "Couldn't connect.";
+			}
+		}
 	}
+
+	cout << "CreateFile " << key << endl;
 
 	DWORD mode{ PIPE_READMODE_MESSAGE };
 	auto modeSet = SetNamedPipeHandleState(
@@ -39,6 +56,8 @@ void send(string key, T data) {
 	if (!modeSet) {
 		throw "Couldn't put pipe into message mode.";
 	}
+
+	cout << "Mode set " << key << endl;
 
 	sendHeader(h, key);
 	sendData(h, data);

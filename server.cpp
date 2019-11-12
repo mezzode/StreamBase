@@ -2,6 +2,7 @@
 //
 
 #include <windows.h>
+#include <shared_mutex>
 #include <thread>
 #include <sstream>
 #include <unordered_map>
@@ -15,9 +16,8 @@ using namespace std;
 int main()
 {
 	cout << "I am the server." << endl;
-
-	// TODO: add mutex. stl allows multiple threads reading and one writing
-	auto store = unordered_map<string, string>{};
+	
+	Store store;
 
 	while (TRUE) {
 		const DWORD pipeMode{ PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT };
@@ -45,6 +45,7 @@ int main()
 		// create a separate thread so can handle clients asynchronously
 		thread{[h, &store]() {
 			read(h, store);
+			FlushFileBuffers(h);
 			const BOOL dSuccess = DisconnectNamedPipe(h);
 			if (!dSuccess) {
 				cout << "0x" << hex << GetLastError() << endl;
@@ -60,14 +61,22 @@ void read(HANDLE h, Store &store) {
 	switch (action.type) {
 		case Type::Send: {
 			cout << "Saving data for key " << action.key << endl;
-			store[action.key] = readData(h);
+			{
+				// only one thread can write at a time
+				std::lock_guard<std::shared_mutex> lg{ store.lock };
+				store.records[action.key] = readData(h);
+			}
 			cout << "Saved data for key " << action.key << endl;
 			saveSuccess(h);
 			break;
 		}
 		case Type::Get: {
 			cout << "Getting data for key " << action.key << endl;
-			returnData(h, store.at(action.key));
+			{
+				// any number of threads can read
+				std::shared_lock<std::shared_mutex> lg{ store.lock };
+				returnData(h, store.records.at(action.key));
+			}
 			cout << "Got data for key " << action.key << endl;
 			break;
 		}

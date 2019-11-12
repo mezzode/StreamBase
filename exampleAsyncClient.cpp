@@ -14,14 +14,24 @@ int main()
 	// sends
 
 	auto intSend{ std::async(policy, []() {
+		cout << "Sending int" << endl;
 		send("mykeyasync", 101);
 	}) };
 
 	auto strSend{ std::async(policy, []() {
-		send("she", string{ "ra" });
+		cout << "Sending string" << endl;
+		try {
+			send("she", string{ "ra" });
+		} catch (char e[]) {
+			// manually catch errors since exceptions only propagate on .get()
+			cout << e << endl;
+			std::terminate();
+		}
+		cout << "Sent string" << endl;
 	}) };
 	
 	auto customSend{ std::async(policy, []() {
+		cout << "Sending custom class" << endl;
 		CustomClass custom{ 42, 81 };
 		custom.incrementA();
 		custom.incrementB();
